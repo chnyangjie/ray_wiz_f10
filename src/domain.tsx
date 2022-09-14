@@ -12,3 +12,8 @@ export interface Profit{
     value: number
     ratio: number
 }
+
+export interface CompanyInfo{
+    fullCode: string
+    data: string[][]
+}

@@ -1,47 +1,52 @@
 import { ActionPanel, Detail, List, Action } from "@raycast/api";
 import { useEffect, useState } from 'react'
-import { Report } from "./domain";
+import { Report, CompanyInfo } from "./domain";
 import { getStockList, getIncomeStatement } from './spider'
 
 export default function Command() {
   const [symbol, setSymbol] = useState<string>('')
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [statementList, setStatementList] = useState<Report[]>([])
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo>()
   let fetchData = async () => {
     setIsLoading(true)
     if (symbol) {
-      let fullSymbol = await getStockList(symbol)
-      if (fullSymbol) {
-        let incomeStatement = await getIncomeStatement(fullSymbol)
+      let ci = await getStockList(symbol)
+      if (ci) {
+        setCompanyInfo(ci)
+        let incomeStatement = await getIncomeStatement(ci.fullCode)
         setStatementList(incomeStatement)
       }
-      else{
+      else {
         setStatementList([])
       }
     }
     setIsLoading(false)
   }
   let toTable = (item: Report): string => {
-    let dataList = item.data
     let result: string[] = []
-    result.push("|key|value|")
-    result.push("|---|---|")
-    dataList.forEach((map) => {
-      result.push(`|${map[0]} | ${map[1]}|`)
-    })
+    if (companyInfo) {
+      result = companyInfo.data.map((v: string[]) => {
+        return v.join(" ")
+      })
+    }
+    // let dataList = item.data
+    // result.push("|key|value|")
+    // result.push("|---|---|")
+    // dataList.forEach((map) => {
+    //   result.push(`|${map[0]} | ${map[1]}|`)
+    // })
     if (item.profit) {
-      return item.profit.map(item => {
-        return `* ${item.item} ${item.value}`
-      }).join("\n")
+      item.profit.forEach(item => {
+        result.push(`* ${item.item} ${item.value}\n`)
+      })
     }
-    else {
-      return result.join("\n\n")
-    }
+    return result.join("\n\n")
   }
   useEffect(() => {
     let f = fetchData()
   }, [symbol])
-  let search = (symbol: string) =>{
+  let search = (symbol: string) => {
     setIsLoading(true)
     fetchData()
     setSymbol(symbol)
@@ -61,7 +66,7 @@ export default function Command() {
       isLoading={isLoading}
       searchBarPlaceholder="Search for a US ticker"
       searchText={symbol}
-      onSearchTextChange={(s)=>search(s)}
+      onSearchTextChange={(s) => search(s)}
       throttle={true}
       isShowingDetail={statementList.length > 0}
     >
@@ -72,7 +77,7 @@ export default function Command() {
           accessories={[{ "text": item.symbol }]}
           detail={
             <List.Item.Detail
-              // markdown={toTable(item)}
+              markdown={toTable(item)}
               metadata={
                 <List.Item.Detail.Metadata>
                   {item.data.map((pair, index) => {
